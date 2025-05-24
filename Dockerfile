@@ -9,6 +9,7 @@ RUN npm ci
 # Stage 2: Build the application
 FROM base AS builder
 WORKDIR /app
+ENV NEXT_PUBLIC_API_BASE_URL=https://a10-buildingstore-be.koyeb.app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

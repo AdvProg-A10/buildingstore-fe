@@ -27,6 +27,7 @@ export default function Login() {
 
             if (response.ok) {
                 router.push('/');
+                router.refresh();
             } else {
                 setError('Username atau password yang diberikan salah. Silahkan coba lagi.');
             }

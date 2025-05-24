@@ -14,6 +14,7 @@ export function LogoutButton() {
                 method: 'GET',
             });
             router.push('/login');
+            router.refresh();
         } catch (error) {
             console.error('Logout failed:', error);
         }

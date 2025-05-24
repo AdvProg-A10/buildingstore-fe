@@ -3,13 +3,8 @@ import { checkAuth } from '@/lib/auth';
 import { LogoutButton } from '@/components/LogoutButton';
 
 export default async function Navbar() {
-    let isAuthenticated = false;
-    try {
-        await checkAuth();
-        isAuthenticated = true;
-    } catch {
-        // Not authenticated
-    }
+    const user = await checkAuth();
+    const isAuthenticated = user !== null;
 
     return (
         <nav className="bg-white border-b border-gray-200">

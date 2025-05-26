@@ -44,7 +44,7 @@ export default function SupplierDetailPage() {
           throw new Error('Supplier tidak ditemukan.');
         }
         const errorData = await response.text();
-        throw new Error(`Gagal mengambil detail supplier: ${response.status} ${errorData}`);
+        throw new Error(`Gagal mengambil detail supplier: ${response.status}${errorData ? ` - ${errorData}` : ''}`);
       }
       const apiResponse: ApiResponse<Supplier> = await response.json();
       if (apiResponse.success && apiResponse.data) {
@@ -52,10 +52,16 @@ export default function SupplierDetailPage() {
       } else {
         throw new Error(apiResponse.message || 'Gagal memuat data supplier.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) { // Changed from 'any' to 'unknown'
       console.error("Error fetching supplier detail:", err);
-      setError(err.message);
-      setSupplier(null); 
+      let errorMessage = 'Terjadi kesalahan saat mengambil detail supplier.'; // Default message
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
+      setSupplier(null);
     } finally {
       setLoading(false);
     }
@@ -98,8 +104,17 @@ export default function SupplierDetailPage() {
 
   if (!supplier) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center text-gray-600 bg-slate-50 min-h-screen">
-        Supplier tidak ditemukan.
+      <div className="container mx-auto px-4 py-8 text-center bg-slate-50 min-h-screen">
+        <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Data Tidak Ditemukan</h2>
+            <p className="text-gray-600 mb-6">Supplier yang Anda cari tidak dapat ditemukan.</p>
+            <button
+                onClick={() => router.push('/manajemen-supplier')}
+                className="px-6 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 transition-colors"
+            >
+                <FaArrowLeft className="inline mr-2" /> Kembali ke Daftar Supplier
+            </button>
+        </div>
       </div>
     );
   }

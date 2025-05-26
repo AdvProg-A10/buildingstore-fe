@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { FaSave, FaTimes, FaSpinner, FaArrowLeft } from 'react-icons/fa';
+import { FaSave, FaSpinner, FaArrowLeft } from 'react-icons/fa';
 
 interface SupplierUpdateData {
   name: string;
@@ -41,7 +41,7 @@ export default function EditSupplierPage() {
     jumlah_barang: 0,
     resi: '',
   });
-  const [initialLoading, setInitialLoading] = useState(true); 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export default function EditSupplierPage() {
       if (!response.ok) {
         if (response.status === 404) throw new Error('Supplier tidak ditemukan.');
         const errorData = await response.text();
-        throw new Error(`Gagal mengambil data supplier: ${response.status} ${errorData}`);
+        throw new Error(`Gagal mengambil data supplier: ${response.status}${errorData ? ` - ${errorData}` : ''}`);
       }
       const result: ApiResponse<Supplier> = await response.json();
       if (result.success && result.data) {
@@ -67,8 +67,14 @@ export default function EditSupplierPage() {
       } else {
         throw new Error(result.message || 'Gagal memuat data supplier.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      let errorMessage = 'Terjadi kesalahan saat mengambil detail supplier.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
       console.error("Fetch details error:", err);
     } finally {
       setInitialLoading(false);
@@ -79,8 +85,8 @@ export default function EditSupplierPage() {
     if (supplierId) {
       fetchSupplierDetails(supplierId);
     } else {
-        setError("ID Supplier tidak valid.");
-        setInitialLoading(false);
+      setError("ID Supplier tidak valid.");
+      setInitialLoading(false);
     }
   }, [supplierId, fetchSupplierDetails]);
 
@@ -108,10 +114,10 @@ export default function EditSupplierPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData), 
+        body: JSON.stringify(formData),
       });
 
-      const result: ApiResponse<Supplier> = await response.json(); 
+      const result: ApiResponse<Supplier> = await response.json();
 
       if (!response.ok || !result.success) {
         throw new Error(result.message || `Gagal mengupdate supplier: ${response.statusText}`);
@@ -128,11 +134,17 @@ export default function EditSupplierPage() {
       }
 
       setTimeout(() => {
-        router.push(`/manajemen-supplier/${supplierId}`); 
+        router.push(`/manajemen-supplier/${supplierId}`);
       }, 1500);
 
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan yang tidak diketahui saat update.');
+    } catch (err: unknown) {
+      let errorMessage = 'Terjadi kesalahan yang tidak diketahui saat update.';
+      if (err instanceof Error) {
+        errorMessage = err.message || errorMessage; 
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
       console.error("Submit error:", err);
     } finally {
       setIsSubmitting(false);
@@ -152,7 +164,7 @@ export default function EditSupplierPage() {
     <div className="container mx-auto px-4 py-8 bg-slate-50 min-h-screen">
       <div className="max-w-2xl mx-auto">
         <button
-          onClick={() => router.back()} 
+          onClick={() => router.back()}
           className="mb-6 inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
         >
           <FaArrowLeft className="mr-2" /> Kembali
@@ -160,7 +172,7 @@ export default function EditSupplierPage() {
 
         <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-6 pb-4 border-b border-gray-200">
-                Edit Supplier {formData.name ? `"${formData.name}"` : ''}
+              Edit Supplier {formData.name ? `"${formData.name}"` : ''}
             </h1>
 
             {error && (
@@ -243,7 +255,7 @@ export default function EditSupplierPage() {
             <div className="flex items-center justify-end pt-4 border-t border-gray-200 space-x-3">
                 <button
                 type="button"
-                onClick={() => router.back()} 
+                onClick={() => router.back()}
                 disabled={isSubmitting}
                 className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 transition-colors disabled:opacity-50"
                 >

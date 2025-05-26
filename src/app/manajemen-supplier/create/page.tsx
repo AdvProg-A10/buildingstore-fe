@@ -80,8 +80,14 @@ export default function CreateSupplierPage() {
       }, 2000);
 
 
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan yang tidak diketahui.');
+} catch (err: unknown) {
+      let errorMessage = 'Terjadi kesalahan yang tidak diketahui.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
       console.error("Submit error:", err);
     } finally {
       setIsLoading(false);

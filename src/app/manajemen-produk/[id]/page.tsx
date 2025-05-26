@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import { id as localeID } from 'date-fns/locale';
 import { FaArrowLeft, FaBox, FaTag, FaHashtag, FaMoneyBillWave, FaInfoCircle, FaBarcode, FaSpinner, FaEdit } from 'react-icons/fa';
 
 interface Produk {
@@ -13,8 +11,8 @@ interface Produk {
   harga: number;
   stok: number;
   deskripsi?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface ApiResponse<T> {
@@ -77,6 +75,36 @@ export default function ProdukDetailPage() {
       style: 'currency',
       currency: 'IDR'
     }).format(amount);
+  };
+
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Tidak tersedia';
+    
+    try {
+      // Try parsing as ISO string first
+      let date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        // Try different parsing approaches
+        date = new Date(dateString.replace(/-/g, '/'));
+        if (isNaN(date.getTime())) {
+          return 'Format tanggal tidak valid';
+        }
+      }
+      
+      return new Intl.DateTimeFormat('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Format tanggal tidak valid';
+    }
   };
 
   if (loading) {
@@ -150,6 +178,7 @@ export default function ProdukDetailPage() {
                 <p className="text-lg">{produk.kategori}</p>
               </div>
             </div>
+            
             <div className="flex items-start">
               <FaMoneyBillWave className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
               <div>
@@ -157,6 +186,7 @@ export default function ProdukDetailPage() {
                 <p className="text-lg">{formatCurrency(produk.harga)}</p>
               </div>
             </div>
+            
             <div className="flex items-start">
               <FaHashtag className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
               <div>
@@ -174,15 +204,21 @@ export default function ProdukDetailPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start">
-              <FaInfoCircle className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
-              <div>
-                <span className="block text-xs font-medium text-gray-500 uppercase">Update Terakhir</span>
-                <p className="text-lg">
-                  {format(new Date(produk.updated_at), 'dd MMMM yyyy, HH:mm:ss', { locale: localeID })}
-                </p>
+            
+            {(produk.updated_at || produk.created_at) && (
+              <div className="flex items-start">
+                <FaInfoCircle className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
+                <div>
+                  <span className="block text-xs font-medium text-gray-500 uppercase">
+                    {produk.updated_at ? 'Update Terakhir' : 'Tanggal Dibuat'}
+                  </span>
+                  <p className="text-lg">
+                    {formatDate(produk.updated_at || produk.created_at)}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+            
             {produk.deskripsi && (
               <div className="md:col-span-2 flex items-start">
                 <FaInfoCircle className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />

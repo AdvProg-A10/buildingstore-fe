@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaPlus, FaBox, FaBarcode, FaSpinner, FaEye, FaEdit } from 'react-icons/fa';
+import { FaPlus, FaBox, FaBarcode, FaSpinner, FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import DeleteModal from '@/components/DeleteModal';
 
 interface Produk {
   id: number;
@@ -27,6 +28,9 @@ export default function ManajemenProdukPage() {
   const router = useRouter();
   const [produkList, setProdukList] = useState<Produk[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [produkToDelete, setProdukToDelete] = useState<Produk | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchAllProduk = useCallback(async () => {
     setLoading(true);
@@ -55,6 +59,47 @@ export default function ManajemenProdukPage() {
   useEffect(() => {
     fetchAllProduk();
   }, [fetchAllProduk]);
+
+  const handleDeleteClick = (produk: Produk) => {
+    setProdukToDelete(produk);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!produkToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/produk/${produkToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      const apiResponse: ApiResponse<null> = await response.json();
+      
+      if (response.ok && apiResponse.success) {
+        // Remove deleted product from list
+        setProdukList(prevList => prevList.filter(p => p.id !== produkToDelete.id));
+        setShowDeleteModal(false);
+        setProdukToDelete(null);
+        
+        // Show success message (you can add toast notification here)
+        console.log('Produk berhasil dihapus');
+      } else {
+        console.error('Error deleting product:', apiResponse.message);
+        alert(`Gagal menghapus produk: ${apiResponse.message}`);
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Terjadi kesalahan saat menghapus produk');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setProdukToDelete(null);
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -168,6 +213,18 @@ export default function ManajemenProdukPage() {
                         >
                           <FaEdit />
                         </button>
+                        <button
+                          onClick={() => handleDeleteClick(produk)}
+                          className="text-red-600 hover:text-red-900 p-2 rounded-lg hover:bg-red-50 transition-colors duration-200"
+                          title="Hapus"
+                          disabled={isDeleting}
+                        >
+                          {isDeleting && produkToDelete?.id === produk.id ? (
+                            <FaSpinner className="animate-spin" />
+                          ) : (
+                            <FaTrash />
+                          )}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -176,6 +233,16 @@ export default function ManajemenProdukPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && produkToDelete && (
+        <DeleteModal
+          title="Konfirmasi Hapus Produk"
+          message={`Apakah Anda yakin ingin menghapus produk "${produkToDelete.nama}"? Tindakan ini tidak dapat dibatalkan.`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
       )}
     </div>
   );

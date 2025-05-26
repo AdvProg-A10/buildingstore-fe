@@ -1,9 +1,7 @@
-
-// src/app/components/transaksi/TransaksiFilters.tsx
 'use client';
 
 import React from 'react';
-import { TransaksiFilters as TransaksiFiltersType } from '@/app/lib/api/transaksi';
+import { TransaksiFilters as TransaksiFiltersType } from '@/types/transaksi';
 
 interface TransaksiFiltersProps {
   filters: TransaksiFiltersType;

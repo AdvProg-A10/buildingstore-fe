@@ -1,8 +1,8 @@
-// src/app/hooks/useProduk.ts
 'use client';
 
 import { useState, useEffect } from 'react';
-import { produkAPI, Produk } from '@/app/lib/api/transaksi';
+import { Produk } from '@/types/transaksi';
+import { config } from '@/config';
 
 export function useProduk() {
   const [produk, setProduk] = useState<Produk[]>([]);
@@ -13,7 +13,23 @@ export function useProduk() {
     try {
       setLoading(true);
       setError(null);
-      const data = await produkAPI.getAllProduk();
+
+      const apiUrl = `${config.apiBaseUrl}/api/produk`;
+      console.log('🔍 Fetching products from:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: Produk[] = await response.json();
       setProduk(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch products');
@@ -32,9 +48,9 @@ export function useProduk() {
 
   const searchProduk = (keyword: string) => {
     if (!keyword.trim()) return produk;
-    
+
     const lowercaseKeyword = keyword.toLowerCase();
-    return produk.filter(p => 
+    return produk.filter(p =>
       p.nama.toLowerCase().includes(lowercaseKeyword) ||
       p.kategori.toLowerCase().includes(lowercaseKeyword)
     );

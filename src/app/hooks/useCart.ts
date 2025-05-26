@@ -1,50 +1,60 @@
-// src/app/hooks/useCart.ts
 'use client';
 
 import { useState, useCallback } from 'react';
-import { CartItem, Produk, CartUtils } from '@/app/lib/api/transaksi';
+import type { CartItem, Produk } from '@/types/transaksi';
 
 export function useCart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  const addToCart = useCallback((produk: Produk, jumlah: number = 1) => {
-    setCartItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(item => item.id_produk === produk.id);
+  const addToCart = useCallback((produk: Produk, jumlah: number) => {
+    setCartItems(prev => {
+      const existingItem = prev.find(item => item.id_produk === produk.id);
       
-      if (existingItemIndex !== -1) {
-        // Update existing item quantity
-        const updatedItems = [...prevItems];
-        const newQuantity = updatedItems[existingItemIndex].jumlah + jumlah;
-        updatedItems[existingItemIndex] = CartUtils.updateCartItemQuantity(
-          updatedItems[existingItemIndex], 
-          newQuantity
+      if (existingItem) {
+        // Update existing item
+        return prev.map(item => 
+          item.id_produk === produk.id 
+            ? {
+                ...item,
+                jumlah: item.jumlah + jumlah,
+                subtotal: (item.jumlah + jumlah) * item.harga_satuan
+              }
+            : item
         );
-        return updatedItems;
       } else {
-        // Add new item to cart
-        const newCartItem = CartUtils.createCartItem(produk, jumlah);
-        return [...prevItems, newCartItem];
+        // Add new item
+        const newItem: CartItem = {
+          id_produk: produk.id,
+          nama_produk: produk.nama,
+          harga_satuan: produk.harga,
+          jumlah: jumlah,
+          subtotal: produk.harga * jumlah,
+          stok_tersedia: produk.stok
+        };
+        return [...prev, newItem];
       }
     });
   }, []);
 
-  const updateCartItemQuantity = useCallback((id_produk: number, jumlah: number) => {
-    setCartItems(prevItems => {
-      if (jumlah <= 0) {
-        // Remove item if quantity is 0 or less
-        return prevItems.filter(item => item.id_produk !== id_produk);
-      }
-      
-      return prevItems.map(item =>
-        item.id_produk === id_produk
-          ? CartUtils.updateCartItemQuantity(item, jumlah)
-          : item
-      );
-    });
+  const updateCartItemQuantity = useCallback((id_produk: number, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      setCartItems(prev => prev.filter(item => item.id_produk !== id_produk));
+      return;
+    }
+
+    setCartItems(prev => prev.map(item => 
+      item.id_produk === id_produk 
+        ? {
+            ...item,
+            jumlah: newQuantity,
+            subtotal: newQuantity * item.harga_satuan
+          }
+        : item
+    ));
   }, []);
 
   const removeFromCart = useCallback((id_produk: number) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id_produk !== id_produk));
+    setCartItems(prev => prev.filter(item => item.id_produk !== id_produk));
   }, []);
 
   const clearCart = useCallback(() => {
@@ -52,7 +62,7 @@ export function useCart() {
   }, []);
 
   const getCartTotal = useCallback(() => {
-    return CartUtils.calculateTotal(cartItems);
+    return cartItems.reduce((total, item) => total + item.subtotal, 0);
   }, [cartItems]);
 
   const getCartItemCount = useCallback(() => {
@@ -60,11 +70,22 @@ export function useCart() {
   }, [cartItems]);
 
   const validateCart = useCallback(() => {
-    return CartUtils.validateCart(cartItems);
-  }, [cartItems]);
+    const errors: string[] = [];
+    
+    if (cartItems.length === 0) {
+      errors.push('Keranjang kosong');
+    }
 
-  const getCartItem = useCallback((id_produk: number) => {
-    return cartItems.find(item => item.id_produk === id_produk);
+    cartItems.forEach(item => {
+      if (item.stok_tersedia && item.jumlah > item.stok_tersedia) {
+        errors.push(`${item.nama_produk}: jumlah melebihi stok tersedia`);
+      }
+      if (item.jumlah <= 0) {
+        errors.push(`${item.nama_produk}: jumlah tidak valid`);
+      }
+    });
+
+    return errors;
   }, [cartItems]);
 
   return {
@@ -76,6 +97,16 @@ export function useCart() {
     getCartTotal,
     getCartItemCount,
     validateCart,
-    getCartItem,
   };
 }
+
+export const CartUtils = {
+  convertCartToDetailRequests: (cartItems: CartItem[]): import('@/types/transaksi').CreateDetailTransaksiRequest[] => {
+    return cartItems.map(item => ({
+      id_produk: item.id_produk,
+      nama_produk: item.nama_produk,
+      jumlah: item.jumlah,
+      harga_satuan: item.harga_satuan,
+    }));
+  },
+};

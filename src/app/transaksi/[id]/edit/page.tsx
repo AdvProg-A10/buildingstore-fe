@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { transaksiAPI, Transaksi } from '@/app/lib/api/transaksi';
+import { config } from '@/config';
 import TransaksiForm from '@/app/components/transaksi/TransaksiForm';
 import Link from 'next/link';
+import type { Transaksi } from '@/types/transaksi';
 
 export default function EditTransaksiPage() {
   const params = useParams();
@@ -25,7 +26,13 @@ export default function EditTransaksiPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await transaksiAPI.getTransaksiById(id);
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch transaction');
+      }
+      const data = await response.json();
       setTransaksi(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch transaction');
@@ -36,7 +43,17 @@ export default function EditTransaksiPage() {
 
   const handleSubmit = async (data: any) => {
     try {
-      await transaksiAPI.updateTransaksi(id, data);
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update transaction');
+      }
       router.push(`/transaksi/${id}`);
     } catch (error) {
       console.error('Failed to update transaction:', error);

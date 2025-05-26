@@ -3,11 +3,12 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { transaksiAPI, Transaksi } from '@/app/lib/api/transaksi';
+import { config } from '@/config';
 import { useTransaksiDetail } from '@/app/hooks/useTransaksiDetail';
 import TransaksiDetail from '@/app/components/transaksi/TransaksiDetail';
 import DetailTransaksiList from '@/app/components/transaksi/DetailTransaksiList';
 import Link from 'next/link';
+import type { Transaksi } from '@/types/transaksi';
 
 export default function TransaksiDetailPage() {
   const params = useParams();
@@ -30,8 +31,20 @@ export default function TransaksiDetailPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await transaksiAPI.getTransaksiById(id);
-      setTransaksi(data);
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/transaksi/${id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch transaction');
+      }
+      
+      // Handle ApiResponse wrapper
+      const apiResponse = await response.json();
+      if (!apiResponse.success) {
+        throw new Error(apiResponse.error || 'Failed to fetch transaction');
+      }
+      
+      setTransaksi(apiResponse.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch transaction');
     } finally {
@@ -43,15 +56,24 @@ export default function TransaksiDetailPage() {
     if (!transaksi) return;
     
     try {
-      let updatedTransaksi: Transaksi;
-      if (action === 'complete') {
-        updatedTransaksi = await transaksiAPI.completeTransaksi(transaksi.id);
-      } else {
-        updatedTransaksi = await transaksiAPI.cancelTransaksi(transaksi.id);
+      const endpoint = action === 'complete' ? 'complete' : 'cancel';
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${transaksi.id}/${endpoint}`, {
+        method: 'PUT',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} transaction`);
       }
-      setTransaksi(updatedTransaksi);
+      
+      const apiResponse = await response.json();
+      if (!apiResponse.success) {
+        throw new Error(apiResponse.error || `Failed to ${action} transaction`);
+      }
+      
+      setTransaksi(apiResponse.data);
     } catch (error) {
       console.error('Failed to update transaction status:', error);
+      alert(`Gagal ${action === 'complete' ? 'menyelesaikan' : 'membatalkan'} transaksi`);
     }
   };
 
@@ -60,7 +82,13 @@ export default function TransaksiDetailPage() {
     
     if (confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
       try {
-        await transaksiAPI.deleteTransaksi(transaksi.id);
+        const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${transaksi.id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete transaction');
+        }
         router.push('/transaksi');
       } catch (error) {
         console.error('Failed to delete transaction:', error);

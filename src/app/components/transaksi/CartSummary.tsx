@@ -1,8 +1,7 @@
-// src/app/components/transaksi/CartSummary.tsx
 'use client';
 
 import React from 'react';
-import { CartItem } from '@/app/lib/api/transaksi';
+import { CartItem } from '@/types/transaksi';
 
 interface CartSummaryProps {
   cartItems: CartItem[];

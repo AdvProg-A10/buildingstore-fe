@@ -55,9 +55,11 @@ export default function ProdukDetailPage() {
       } else {
         throw new Error(apiResponse.message || 'Gagal memuat data produk.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      }
       console.error("Error fetching produk detail:", err);
-      setError(err.message);
       setProduk(null); 
     } finally {
       setLoading(false);

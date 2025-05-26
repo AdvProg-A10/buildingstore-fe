@@ -13,6 +13,7 @@ interface DetailTransaksiListProps {
 }
 
 export default function DetailTransaksiList({ 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   transaksiId: _transaksiId,
   details, 
   loading, 

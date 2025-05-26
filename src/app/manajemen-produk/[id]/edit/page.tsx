@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { FaSave, FaTimes, FaSpinner, FaArrowLeft } from 'react-icons/fa';
+import { FaSave, FaSpinner, FaArrowLeft } from 'react-icons/fa';
 
 interface ProdukUpdateData {
   nama: string;
@@ -71,8 +71,10 @@ export default function EditProdukPage() {
       } else {
         throw new Error(result.message || 'Gagal memuat data produk.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      }
       console.error("Fetch details error:", err);
     } finally {
       setInitialLoading(false);
@@ -136,8 +138,13 @@ export default function EditProdukPage() {
         router.push(`/manajemen-produk/${produkId}`);
       }, 1500);
 
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan yang tidak diketahui saat update.');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        // Handle unexpected error types
+        setError('Terjadi kesalahan yang tidak diketahui saat update.');
+      }
       console.error("Submit error:", err);
     } finally {
       setIsSubmitting(false);

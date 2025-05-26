@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaSave, FaTimes, FaSpinner, FaArrowLeft } from 'react-icons/fa';
+import { FaSave, FaTimes, FaSpinner } from 'react-icons/fa';
 
 interface ProdukFormData {
   nama: string;
@@ -71,8 +71,14 @@ export default function CreateProdukPage() {
         router.push('/manajemen-produk');
       }, 1500);
 
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan yang tidak diketahui.');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      }
+      else {
+        // Handle unexpected error types
+        setError('Terjadi kesalahan yang tidak diketahui.');
+      }
       console.error("Submit error:", err);
     } finally {
       setIsLoading(false);

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FaArrowLeft, FaBox, FaTag, FaHashtag, FaMoneyBillWave, FaInfoCircle, FaBarcode, FaSpinner, FaEdit } from 'react-icons/fa';
+import { FaArrowLeft, FaBox, FaTag, FaHashtag, FaMoneyBillWave, FaInfoCircle, FaBarcode, FaSpinner, FaEdit, FaTrash } from 'react-icons/fa';
+import DeleteModal from '@/components/DeleteModal';
 
 interface Produk {
   id: number;
@@ -33,6 +34,8 @@ export default function ProdukDetailPage() {
   const [produk, setProduk] = useState<Produk | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchProdukDetail = useCallback(async (id: string) => {
     setLoading(true);
@@ -69,6 +72,41 @@ export default function ProdukDetailPage() {
       setError("ID Produk tidak valid atau tidak ditemukan.");
     }
   }, [produkId, fetchProdukDetail]);
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!produk) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/produk/${produk.id}`, {
+        method: 'DELETE',
+      });
+
+      const apiResponse: ApiResponse<null> = await response.json();
+      
+      if (response.ok && apiResponse.success) {
+        // Navigate back to product list after successful deletion
+        router.push('/manajemen-produk');
+      } else {
+        console.error('Error deleting product:', apiResponse.message);
+        alert(`Gagal menghapus produk: ${apiResponse.message}`);
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Terjadi kesalahan saat menghapus produk');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -162,12 +200,29 @@ export default function ProdukDetailPage() {
                 <FaBarcode className="inline mr-1.5" /> ID: {produk.id}
               </p>
             </div>
-            <button
-              onClick={() => router.push(`/manajemen-produk/${produk.id}/edit`)}
-              className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <FaEdit /> Edit Produk
-            </button>
+            <div className="mt-4 sm:mt-0 flex gap-3">
+              <button
+                onClick={() => router.push(`/manajemen-produk/${produk.id}/edit`)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <FaEdit /> Edit
+              </button>
+              <button
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? (
+                  <>
+                    <FaSpinner className="animate-spin" /> Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <FaTrash /> Hapus
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-gray-700">
@@ -231,6 +286,16 @@ export default function ProdukDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Modal */}
+      {showDeleteModal && produk && (
+        <DeleteModal
+          title="Konfirmasi Hapus Produk"
+          message={`Apakah Anda yakin ingin menghapus produk "${produk.nama}"? Tindakan ini tidak dapat dibatalkan.`}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
+      )}
     </div>
   );
 }

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { config } from '@/config';
 import TransaksiForm from '@/app/components/transaksi/TransaksiForm';
 import Link from 'next/link';
-import type { Transaksi } from '@/types/transaksi';
+import type { Transaksi, CreateTransaksiRequest } from '@/types/transaksi';
 
 export default function EditTransaksiPage() {
   const params = useParams();
@@ -16,13 +16,7 @@ export default function EditTransaksiPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetchTransaksi();
-    }
-  }, [id]);
-
-  const fetchTransaksi = async () => {
+  const fetchTransaksi = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -39,9 +33,15 @@ export default function EditTransaksiPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const handleSubmit = async (data: any) => {
+  useEffect(() => {
+    if (id) {
+      fetchTransaksi();
+    }
+  }, [id, fetchTransaksi]);
+
+  const handleSubmit = async (data: CreateTransaksiRequest) => {
     try {
       const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}`, {
         method: 'PATCH',

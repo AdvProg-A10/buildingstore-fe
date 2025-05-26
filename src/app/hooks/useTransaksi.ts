@@ -166,7 +166,6 @@ export function useTransaksi(filters?: TransaksiFilters) {
   };
 }
 
-// Hook untuk single transaksi
 export function useTransaksiById(id: number) {
   const [transaksi, setTransaksi] = useState<Transaksi | null>(null);
   const [loading, setLoading] = useState(true);

@@ -5,13 +5,13 @@ import ProductSelector from '@/app/components/transaksi/ProductSelector';
 import CartSummary from '@/app/components/transaksi/CartSummary';
 import CustomerSelector from '@/app/components/transaksi/CustomerSelector';
 import { useCart, CartUtils } from '@/app/hooks/useCart';
-import type { CreateTransaksiRequest, Pelanggan, Produk } from '@/types/transaksi';
+import type { CreateTransaksiRequest, Pelanggan, Transaksi } from '@/types/transaksi';
 
 interface TransaksiFormProps {
   onSubmit: (data: CreateTransaksiRequest) => void;
   onCancel: () => void;
   submitLabel: string;
-  initialData?: any;
+  initialData?: Transaksi;
 }
 
 export default function TransaksiForm({ onSubmit, onCancel, submitLabel, initialData }: TransaksiFormProps) {

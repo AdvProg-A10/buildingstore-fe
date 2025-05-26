@@ -2,13 +2,12 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { config } from '@/config';
-import { useTransaksiDetail } from '@/app/hooks/useTransaksiDetail';
 import TransaksiDetail from '@/app/components/transaksi/TransaksiDetail';
 import DetailTransaksiList from '@/app/components/transaksi/DetailTransaksiList';
 import Link from 'next/link';
-import type { Transaksi } from '@/types/transaksi';
+import type { Transaksi, DetailTransaksi } from '@/types/transaksi';
 
 export default function TransaksiDetailPage() {
   const params = useParams();
@@ -19,38 +18,58 @@ export default function TransaksiDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { details, loading: detailsLoading, error: detailsError, refetch: refetchDetails } = useTransaksiDetail(id);
+  const [details, setDetails] = useState<DetailTransaksi[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetchTransaksi();
-    }
-  }, [id]);
-
-  const fetchTransaksi = async () => {
+  const fetchTransaksi = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/transaksi/${id}`, {
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}`, {
         credentials: 'include',
       });
       if (!response.ok) {
         throw new Error('Failed to fetch transaction');
       }
       
-      // Handle ApiResponse wrapper
-      const apiResponse = await response.json();
-      if (!apiResponse.success) {
-        throw new Error(apiResponse.error || 'Failed to fetch transaction');
-      }
-      
-      setTransaksi(apiResponse.data);
+      const data = await response.json();
+      setTransaksi(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch transaction');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  const fetchDetails = useCallback(async () => {
+    try {
+      setDetailsLoading(true);
+      setDetailsError(null);
+      
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}/detail`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch transaction details');
+      }
+
+      const data = await response.json();
+      setDetails(data);
+    } catch (err) {
+      setDetailsError(err instanceof Error ? err.message : 'Failed to fetch transaction details');
+    } finally {
+      setDetailsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchTransaksi();
+      fetchDetails();
+    }
+  }, [id, fetchTransaksi, fetchDetails]);
 
   const handleStatusChange = async (action: 'complete' | 'cancel') => {
     if (!transaksi) return;
@@ -66,11 +85,10 @@ export default function TransaksiDetailPage() {
       }
       
       const apiResponse = await response.json();
-      if (!apiResponse.success) {
-        throw new Error(apiResponse.error || `Failed to ${action} transaction`);
+      if (apiResponse.message) {
+        alert(`Transaksi berhasil ${action === 'complete' ? 'diselesaikan' : 'dibatalkan'}`);
+        await fetchTransaksi();
       }
-      
-      setTransaksi(apiResponse.data);
     } catch (error) {
       console.error('Failed to update transaction status:', error);
       alert(`Gagal ${action === 'complete' ? 'menyelesaikan' : 'membatalkan'} transaksi`);
@@ -89,9 +107,15 @@ export default function TransaksiDetailPage() {
         if (!response.ok) {
           throw new Error('Failed to delete transaction');
         }
-        router.push('/transaksi');
+        
+        const apiResponse = await response.json();
+        if (apiResponse.message) {
+          alert('Transaksi berhasil dihapus');
+          router.push('/transaksi');
+        }
       } catch (error) {
         console.error('Failed to delete transaction:', error);
+        alert('Gagal menghapus transaksi');
       }
     }
   };
@@ -174,7 +198,7 @@ export default function TransaksiDetailPage() {
             details={details}
             loading={detailsLoading}
             error={detailsError}
-            onRefetch={refetchDetails}
+            onRefetch={fetchDetails}
             canEdit={transaksi.status === 'MASIH_DIPROSES'}
           />
         </div>

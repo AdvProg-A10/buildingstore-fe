@@ -26,7 +26,7 @@ export default async function Home() {
           <DashboardCard
             title="Transaksi Penjualan"
             icon={<FaShoppingCart className="w-6 h-6" />}
-            href="/transaksi-penjualan"
+            href="/transaksi"
             color="bg-blue-500"
           />
           <DashboardCard
@@ -81,7 +81,7 @@ export default async function Home() {
           <DashboardCard
             title="Transaksi Penjualan"
             icon={<FaShoppingCart className="w-6 h-6" />}
-            href="/transaksi-penjualan"
+            href="/transaksi"
             color="bg-blue-500"
           />
           <DashboardCard

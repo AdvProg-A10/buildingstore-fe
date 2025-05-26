@@ -13,7 +13,7 @@ interface DetailTransaksiListProps {
 }
 
 export default function DetailTransaksiList({ 
-  transaksiId, 
+  transaksiId: _transaksiId,
   details, 
   loading, 
   error, 

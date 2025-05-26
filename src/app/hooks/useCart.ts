@@ -11,7 +11,6 @@ export function useCart() {
       const existingItem = prev.find(item => item.id_produk === produk.id);
       
       if (existingItem) {
-        // Update existing item
         return prev.map(item => 
           item.id_produk === produk.id 
             ? {
@@ -22,7 +21,6 @@ export function useCart() {
             : item
         );
       } else {
-        // Add new item
         const newItem: CartItem = {
           id_produk: produk.id,
           nama_produk: produk.nama,

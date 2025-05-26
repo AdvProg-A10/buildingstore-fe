@@ -28,7 +28,7 @@ export default function TransaksiPage() {
     const fetchTransaksi = useCallback(async () => {
         try {
             setLoading(true);
-            const baseUrl = `${config.apiBaseUrl}/api/transaksi/transaksi`;
+            const baseUrl = `${config.apiBaseUrl}/api/transaksi`;
             const queryParams = new URLSearchParams();
 
             if (sortField) {
@@ -51,12 +51,9 @@ export default function TransaksiPage() {
 
             if (!response.ok) throw new Error('Failed to fetch transaksi');
             
-            const apiResponse = await response.json();
-            if (apiResponse.success && apiResponse.data) {
-                setTransaksi(apiResponse.data.transaksi || []);
-            } else {
-                setTransaksi([]);
-            }
+            const data = await response.json();
+            console.log('📊 Received transaksi data:', data);
+            setTransaksi(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error:', error);
             setTransaksi([]);
@@ -75,7 +72,7 @@ export default function TransaksiPage() {
         }
 
         try {
-            const response = await fetch(`${config.apiBaseUrl}/api/transaksi/transaksi/${transaksi.id}`, {
+            const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${transaksi.id}`, {
                 method: 'DELETE',
                 credentials: 'include',
             });
@@ -92,7 +89,7 @@ export default function TransaksiPage() {
     const handleStatusChange = async (transaksi: Transaksi, action: 'complete' | 'cancel') => {
         try {
             const endpoint = action === 'complete' ? 'complete' : 'cancel';
-            const response = await fetch(`${config.apiBaseUrl}/api/transaksi/transaksi/${transaksi.id}/${endpoint}`, {
+            const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${transaksi.id}/${endpoint}`, {
                 method: 'PUT',
                 credentials: 'include',
             });
@@ -335,7 +332,7 @@ export default function TransaksiPage() {
                                 </p>
                                 {item.catatan && (
                                     <p className="text-gray-500 text-sm mt-1 italic">
-                                        "{item.catatan}"
+                                        &ldquo;{item.catatan}&rdquo;
                                     </p>
                                 )}
                             </div>

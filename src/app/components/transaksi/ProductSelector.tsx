@@ -9,6 +9,14 @@ interface ProductSelectorProps {
   onAddToCart: (produk: Produk, jumlah: number) => void;
 }
 
+interface DebugInfo {
+  url: string;
+  status: number;
+  headers: Record<string, string>;
+  responseLength: number;
+  responsePreview: string;
+}
+
 export default function ProductSelector({ onAddToCart }: ProductSelectorProps) {
   const [produk, setProduk] = useState<Produk[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +24,7 @@ export default function ProductSelector({ onAddToCart }: ProductSelectorProps) {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
 
   const fetchProducts = async () => {
     try {
@@ -24,7 +32,6 @@ export default function ProductSelector({ onAddToCart }: ProductSelectorProps) {
       setError(null);
       setDebugInfo(null);
       
-      // Since backend shows 200 OK, let's directly call the working endpoint
       const apiUrl = `${config.apiBaseUrl}/api/produk`;
       console.log('🔍 Fetching products from:', apiUrl);
       
@@ -55,7 +62,7 @@ export default function ProductSelector({ onAddToCart }: ProductSelectorProps) {
         responsePreview: responseText.substring(0, 300),
       });
 
-      let apiResponse;
+      let apiResponse: unknown;
       try {
         apiResponse = JSON.parse(responseText);
         console.log('✅ Parsed JSON successfully:', apiResponse);
@@ -64,40 +71,43 @@ export default function ProductSelector({ onAddToCart }: ProductSelectorProps) {
         throw new Error('Response bukan format JSON yang valid');
       }
 
-      let backendProducts = [];
+      let backendProducts: unknown[] = [];
       
-      if (apiResponse && typeof apiResponse === 'object') {
+      if (apiResponse && typeof apiResponse === 'object' && apiResponse !== null) {
         if (Array.isArray(apiResponse)) {
           backendProducts = apiResponse;
           console.log('📦 Format: Direct array');
         }
-        else if (apiResponse.success !== undefined) {
-          if (apiResponse.success && apiResponse.data) {
-            backendProducts = Array.isArray(apiResponse.data) ? apiResponse.data : [];
-            console.log('📦 Format: Success wrapper with data');
-          } else {
-            const errorMsg = apiResponse.message || 'Backend returned success: false';
-            console.error('❌ Backend error:', errorMsg);
-            throw new Error(`Backend error: ${errorMsg}`);
-          }
-        }
-        else if (apiResponse.data) {
-          backendProducts = Array.isArray(apiResponse.data) ? apiResponse.data : [];
-          console.log('📦 Format: Data wrapper');
-        }
-        else if (apiResponse.products) {
-          backendProducts = Array.isArray(apiResponse.products) ? apiResponse.products : [];
-          console.log('📦 Format: Products wrapper');
-        }
         else {
-          console.log('📦 Format: Single object or unknown structure');
-          console.log('📦 Object keys:', Object.keys(apiResponse));
-          
-          if (apiResponse.id || apiResponse.nama || apiResponse.name) {
-            backendProducts = [apiResponse];
-            console.log('📦 Treated as single product');
-          } else {
-            throw new Error('Response structure tidak dikenali');
+          const responseObj = apiResponse as Record<string, unknown>;
+          if (responseObj.success !== undefined) {
+            if (responseObj.success && responseObj.data) {
+              backendProducts = Array.isArray(responseObj.data) ? responseObj.data : [];
+              console.log('📦 Format: Success wrapper with data');
+            } else {
+              const errorMsg = (responseObj.message as string) || 'Backend returned success: false';
+              console.error('❌ Backend error:', errorMsg);
+              throw new Error(`Backend error: ${errorMsg}`);
+            }
+          }
+          else if (responseObj.data) {
+            backendProducts = Array.isArray(responseObj.data) ? responseObj.data : [];
+            console.log('📦 Format: Data wrapper');
+          }
+          else if (responseObj.products) {
+            backendProducts = Array.isArray(responseObj.products) ? responseObj.products : [];
+            console.log('📦 Format: Products wrapper');
+          }
+          else {
+            console.log('📦 Format: Single object or unknown structure');
+            console.log('📦 Object keys:', Object.keys(responseObj));
+            
+            if (responseObj.id || responseObj.nama || responseObj.name) {
+              backendProducts = [responseObj];
+              console.log('📦 Treated as single product');
+            } else {
+              throw new Error('Response structure tidak dikenali');
+            }
           }
         }
       } else {
@@ -117,16 +127,18 @@ export default function ProductSelector({ onAddToCart }: ProductSelectorProps) {
         return;
       }
 
-      const transformedProducts: Produk[] = backendProducts.map((item: any, index: number) => {
+      const transformedProducts: Produk[] = backendProducts.map((item: unknown, index: number) => {
         console.log(`🔄 Transforming product ${index}:`, item);
         
+        const itemObj = item as Record<string, unknown>;
+        
         const product: Produk = {
-          id: item.id || item.ID || item.product_id || index + 1,
-          nama: item.nama || item.name || item.product_name || item.title || `Produk ${index + 1}`,
-          kategori: item.kategori || item.category || item.product_category || item.type || 'Tanpa Kategori',
-          harga: parseFloat(item.harga || item.price || item.product_price || item.cost || 0),
-          stok: parseInt(item.stok || item.stock || item.product_stock || item.quantity || 0),
-          deskripsi: item.deskripsi || item.description || item.product_description || item.desc || undefined,
+          id: (itemObj.id as number) || (itemObj.ID as number) || (itemObj.product_id as number) || index + 1,
+          nama: (itemObj.nama as string) || (itemObj.name as string) || (itemObj.product_name as string) || (itemObj.title as string) || `Produk ${index + 1}`,
+          kategori: (itemObj.kategori as string) || (itemObj.category as string) || (itemObj.product_category as string) || (itemObj.type as string) || 'Tanpa Kategori',
+          harga: parseFloat(String(itemObj.harga || itemObj.price || itemObj.product_price || itemObj.cost || 0)),
+          stok: parseInt(String(itemObj.stok || itemObj.stock || itemObj.product_stock || itemObj.quantity || 0)),
+          deskripsi: (itemObj.deskripsi as string) || (itemObj.description as string) || (itemObj.product_description as string) || (itemObj.desc as string) || undefined,
         };
 
         console.log(`✅ Transformed product ${index}:`, product);

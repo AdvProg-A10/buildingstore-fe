@@ -1,8 +1,8 @@
-// src/app/hooks/useTransaksi.ts
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { transaksiAPI, Transaksi, TransaksiFilters, CreateTransaksiRequest } from '@/app/lib/api/transaksi';
+import { config } from '@/config';
+import { Transaksi, TransaksiFilters, CreateTransaksiRequest } from '@/types/transaksi';
 
 export function useTransaksi(filters?: TransaksiFilters) {
   const [transaksi, setTransaksi] = useState<Transaksi[]>([]);
@@ -13,10 +13,36 @@ export function useTransaksi(filters?: TransaksiFilters) {
     try {
       setLoading(true);
       setError(null);
-      const data = await transaksiAPI.getAllTransaksi(filters);
+      
+      const queryParams = new URLSearchParams();
+      
+      if (filters?.sort) {
+        queryParams.append('sort', filters.sort);
+      }
+      
+      if (filters?.status) {
+        queryParams.append('status', filters.status);
+      }
+      
+      if (filters?.filter && filters?.keyword) {
+        queryParams.append('filter', filters.filter);
+        queryParams.append('keyword', filters.keyword);
+      }
+
+      const url = `${config.apiBaseUrl}/api/transaksi${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      
+      const response = await fetch(url, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions');
+      }
+
+      const data = await response.json();
       setTransaksi(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch transaksi');
+      setError(err instanceof Error ? err.message : 'Failed to fetch transactions');
     } finally {
       setLoading(false);
     }
@@ -28,49 +54,101 @@ export function useTransaksi(filters?: TransaksiFilters) {
 
   const createTransaksi = async (data: CreateTransaksiRequest) => {
     try {
-      setError(null);
-      const newTransaksi = await transaksiAPI.createTransaksi(data);
-      setTransaksi(prev => [newTransaksi, ...prev]);
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create transaction');
+      }
+
+      const newTransaksi = await response.json();
+      setTransaksi(prev => [...prev, newTransaksi]);
       return newTransaksi;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create transaksi';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  };
-
-  const completeTransaksi = async (id: number) => {
-    try {
-      const updatedTransaksi = await transaksiAPI.completeTransaksi(id);
-      setTransaksi(prev => 
-        prev.map(t => t.id === id ? updatedTransaksi : t)
-      );
-      return updatedTransaksi;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete transaksi');
       throw err;
     }
   };
 
-  const cancelTransaksi = async (id: number) => {
+  const updateTransaksi = async (id: number, data: Partial<CreateTransaksiRequest>) => {
     try {
-      const updatedTransaksi = await transaksiAPI.cancelTransaksi(id);
-      setTransaksi(prev => 
-        prev.map(t => t.id === id ? updatedTransaksi : t)
-      );
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update transaction');
+      }
+
+      const updatedTransaksi = await response.json();
+      setTransaksi(prev => prev.map(t => t.id === id ? updatedTransaksi : t));
       return updatedTransaksi;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel transaksi');
       throw err;
     }
   };
 
   const deleteTransaksi = async (id: number) => {
     try {
-      await transaksiAPI.deleteTransaksi(id);
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete transaction');
+      }
+
       setTransaksi(prev => prev.filter(t => t.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete transaksi');
+      throw err;
+    }
+  };
+
+  const completeTransaksi = async (id: number) => {
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}/complete`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to complete transaction');
+      }
+
+      const updatedTransaksi = await response.json();
+      setTransaksi(prev => prev.map(t => t.id === id ? updatedTransaksi : t));
+      return updatedTransaksi;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const cancelTransaksi = async (id: number) => {
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}/cancel`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel transaction');
+      }
+
+      const updatedTransaksi = await response.json();
+      setTransaksi(prev => prev.map(t => t.id === id ? updatedTransaksi : t));
+      return updatedTransaksi;
+    } catch (err) {
       throw err;
     }
   };
@@ -79,10 +157,53 @@ export function useTransaksi(filters?: TransaksiFilters) {
     transaksi,
     loading,
     error,
+    refetch: fetchTransaksi,
     createTransaksi,
+    updateTransaksi,
+    deleteTransaksi,
     completeTransaksi,
     cancelTransaksi,
-    deleteTransaksi,
+  };
+}
+
+// Hook untuk single transaksi
+export function useTransaksiById(id: number) {
+  const [transaksi, setTransaksi] = useState<Transaksi | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTransaksi = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`${config.apiBaseUrl}/api/transaksi/${id}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch transaction');
+      }
+
+      const data = await response.json();
+      setTransaksi(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch transaction');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchTransaksi();
+    }
+  }, [fetchTransaksi, id]);
+
+  return {
+    transaksi,
+    loading,
+    error,
     refetch: fetchTransaksi,
   };
 }

@@ -1,9 +1,7 @@
-
-// src/app/components/transaksi/TransaksiDetail.tsx
 'use client';
 
 import React from 'react';
-import { Transaksi } from '@/app/lib/api/transaksi';
+import { Transaksi } from '@/types/transaksi';
 
 interface TransaksiDetailProps {
   transaksi: Transaksi;
@@ -27,6 +25,15 @@ export default function TransaksiDetail({ transaksi }: TransaksiDetailProps) {
       case 'DIBATALKAN': return 'bg-red-100 text-red-800';
       case 'MASIH_DIPROSES': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'SELESAI': return 'Selesai';
+      case 'DIBATALKAN': return 'Dibatalkan';
+      case 'MASIH_DIPROSES': return 'Masih Diproses';
+      default: return status;
     }
   };
 
@@ -59,7 +66,7 @@ export default function TransaksiDetail({ transaksi }: TransaksiDetailProps) {
         <div>
           <label className="block text-sm font-medium text-gray-700">Status</label>
           <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeColor(transaksi.status)}`}>
-            {transaksi.status.replace('_', ' ')}
+            {getStatusText(transaksi.status)}
           </span>
         </div>
         

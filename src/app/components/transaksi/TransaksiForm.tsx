@@ -1,50 +1,52 @@
-// src/app/components/transaksi/TransaksiForm.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { CreateTransaksiRequest } from '@/app/lib/api/transaksi';
-import { useCart } from '@/app/hooks/useCart';
-import { CartUtils } from '@/app/lib/api/transaksi';
+import React, { useState, useEffect } from 'react';
 import ProductSelector from '@/app/components/transaksi/ProductSelector';
 import CartSummary from '@/app/components/transaksi/CartSummary';
+import CustomerSelector from '@/app/components/transaksi/CustomerSelector';
+import { useCart, CartUtils } from '@/app/hooks/useCart';
+import type { CreateTransaksiRequest, Pelanggan, Produk } from '@/types/transaksi';
 
 interface TransaksiFormProps {
   onSubmit: (data: CreateTransaksiRequest) => void;
   onCancel: () => void;
   submitLabel: string;
+  initialData?: any;
 }
 
-export default function TransaksiForm({ onSubmit, onCancel, submitLabel }: TransaksiFormProps) {
-  const [customerData, setCustomerData] = useState({
-    id_pelanggan: 0,
-    nama_pelanggan: '',
-    catatan: '',
-  });
-
+export default function TransaksiForm({ onSubmit, onCancel, submitLabel, initialData }: TransaksiFormProps) {
+  const [selectedCustomer, setSelectedCustomer] = useState<Pelanggan | null>(null);
+  const [catatan, setCatatan] = useState('');
   const [currentStep, setCurrentStep] = useState<'customer' | 'products' | 'review'>('customer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { 
-    cartItems, 
-    addToCart, 
-    updateCartItemQuantity, 
-    removeFromCart, 
+  const {
+    cartItems,
+    addToCart,
+    updateCartItemQuantity,
+    removeFromCart,
     clearCart,
     getCartTotal,
-    validateCart 
+    validateCart,
   } = useCart();
 
-  const handleCustomerSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!customerData.nama_pelanggan.trim()) {
-      setError('Nama pelanggan harus diisi');
-      return;
+  useEffect(() => {
+    if (initialData) {
+      setSelectedCustomer({
+        id: initialData.id_pelanggan,
+        nama: initialData.nama_pelanggan,
+        alamat: '', 
+        no_telp: '', 
+        tanggal_gabung: ''
+      });
+      setCatatan(initialData.catatan || '');
     }
+  }, [initialData]);
 
-    if (customerData.id_pelanggan <= 0) {
-      setError('ID pelanggan harus valid');
+  const handleCustomerNext = () => {
+    if (!selectedCustomer) {
+      setError('Silakan pilih pelanggan terlebih dahulu');
       return;
     }
 
@@ -64,19 +66,46 @@ export default function TransaksiForm({ onSubmit, onCancel, submitLabel }: Trans
   };
 
   const handleFinalSubmit = async () => {
+    if (!selectedCustomer) {
+      setError('Data pelanggan tidak ditemukan');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
+      console.log('=== TRANSACTION DEBUG ===');
+      console.log('Selected customer:', selectedCustomer);
+      console.log('Cart items before conversion:', cartItems);
+      console.log('Converted detail_transaksi:', CartUtils.convertCartToDetailRequests(cartItems));
+      
       const finalData: CreateTransaksiRequest = {
-        id_pelanggan: customerData.id_pelanggan,
-        nama_pelanggan: customerData.nama_pelanggan.trim(),
-        catatan: customerData.catatan.trim() || undefined,
+        id_pelanggan: selectedCustomer.id,
+        nama_pelanggan: selectedCustomer.nama,
+        catatan: catatan.trim() || undefined,
         detail_transaksi: CartUtils.convertCartToDetailRequests(cartItems),
       };
 
+      console.log('Final data structure:');
+      console.log('- id_pelanggan:', finalData.id_pelanggan, typeof finalData.id_pelanggan);
+      console.log('- nama_pelanggan:', finalData.nama_pelanggan, typeof finalData.nama_pelanggan);
+      console.log('- catatan:', finalData.catatan);
+      console.log('- detail_transaksi length:', finalData.detail_transaksi.length);
+      finalData.detail_transaksi.forEach((detail, index) => {
+        console.log(`  [${index}]:`, {
+          id_produk: detail.id_produk,
+          nama_produk: detail.nama_produk,
+          harga_satuan: detail.harga_satuan,
+          jumlah: detail.jumlah
+        });
+      });
+      console.log('Raw JSON:', JSON.stringify(finalData, null, 2));
+      console.log('==========================');
+
       await onSubmit(finalData);
     } catch (err) {
+      console.error('Error in handleFinalSubmit:', err);
       setError(err instanceof Error ? err.message : 'Failed to create transaction');
     } finally {
       setLoading(false);
@@ -100,7 +129,6 @@ export default function TransaksiForm({ onSubmit, onCancel, submitLabel }: Trans
 
   return (
     <div className="space-y-6">
-      {/* Steps Indicator */}
       <div className="flex items-center justify-center space-x-4 mb-8">
         <div className={`flex items-center ${currentStep === 'customer' ? 'text-blue-600' : 'text-green-600'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -146,63 +174,29 @@ export default function TransaksiForm({ onSubmit, onCancel, submitLabel }: Trans
 
       {/* Step 1: Customer Data */}
       {currentStep === 'customer' && (
-        <form onSubmit={handleCustomerSubmit} className="space-y-6">
+        <div className="space-y-6">
           <div className="bg-white p-6 rounded-lg border">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Pelanggan</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="id_pelanggan" className="block text-sm font-medium text-gray-700 mb-1">
-                  ID Pelanggan *
-                </label>
-                <input
-                  type="number"
-                  id="id_pelanggan"
-                  value={customerData.id_pelanggan || ''}
-                  onChange={(e) => setCustomerData(prev => ({
-                    ...prev,
-                    id_pelanggan: parseInt(e.target.value) || 0
-                  }))}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  min="1"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="nama_pelanggan" className="block text-sm font-medium text-gray-700 mb-1">
-                  Nama Pelanggan *
-                </label>
-                <input
-                  type="text"
-                  id="nama_pelanggan"
-                  value={customerData.nama_pelanggan}
-                  onChange={(e) => setCustomerData(prev => ({
-                    ...prev,
-                    nama_pelanggan: e.target.value
-                  }))}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  placeholder="Masukkan nama pelanggan"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label htmlFor="catatan" className="block text-sm font-medium text-gray-700 mb-1">
-                Catatan
-              </label>
-              <textarea
-                id="catatan"
-                value={customerData.catatan}
-                onChange={(e) => setCustomerData(prev => ({
-                  ...prev,
-                  catatan: e.target.value
-                }))}
-                rows={3}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Catatan tambahan untuk transaksi ini..."
+            <div className="space-y-6">
+              <CustomerSelector
+                selectedCustomer={selectedCustomer}
+                onCustomerSelect={setSelectedCustomer}
               />
+
+              <div>
+                <label htmlFor="catatan" className="block text-sm font-medium text-gray-700 mb-1">
+                  Catatan
+                </label>
+                <textarea
+                  id="catatan"
+                  value={catatan}
+                  onChange={(e) => setCatatan(e.target.value)}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Catatan tambahan untuk transaksi ini..."
+                />
+              </div>
             </div>
           </div>
 
@@ -215,13 +209,14 @@ export default function TransaksiForm({ onSubmit, onCancel, submitLabel }: Trans
               Batal
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleCustomerNext}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
             >
               Lanjut ke Pilih Produk
             </button>
           </div>
-        </form>
+        </div>
       )}
 
       {/* Step 2: Product Selection */}
@@ -229,6 +224,7 @@ export default function TransaksiForm({ onSubmit, onCancel, submitLabel }: Trans
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
+              {/* ✅ Fixed: Only pass onAddToCart prop */}
               <ProductSelector onAddToCart={addToCart} />
             </div>
             <div>
@@ -271,9 +267,11 @@ export default function TransaksiForm({ onSubmit, onCancel, submitLabel }: Trans
             <div className="mb-6">
               <h4 className="font-medium text-gray-900 mb-2">Informasi Pelanggan</h4>
               <div className="bg-gray-50 p-4 rounded">
-                <p><strong>ID:</strong> {customerData.id_pelanggan}</p>
-                <p><strong>Nama:</strong> {customerData.nama_pelanggan}</p>
-                {customerData.catatan && <p><strong>Catatan:</strong> {customerData.catatan}</p>}
+                <p><strong>ID:</strong> {selectedCustomer?.id}</p>
+                <p><strong>Nama:</strong> {selectedCustomer?.nama}</p>
+                <p><strong>Alamat:</strong> {selectedCustomer?.alamat}</p>
+                <p><strong>No. Telepon:</strong> {selectedCustomer?.no_telp}</p>
+                {catatan && <p><strong>Catatan:</strong> {catatan}</p>}
               </div>
             </div>
 

@@ -1,12 +1,10 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-
-const inter = Inter({ subsets: ['latin'] });
+import type { Metadata } from "next";
+import "./globals.css";
+import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: 'Building Store - Transaksi Management',
-  description: 'Sistem manajemen transaksi untuk Building Store',
+  title: "BuildingStore POS",
+  description: "Point of Sales System",
 };
 
 export default function RootLayout({
@@ -15,30 +13,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id">
-      <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          <nav className="bg-white shadow-sm border-b">
-            <div className="container mx-auto px-4">
-              <div className="flex justify-between h-16">
-                <div className="flex items-center">
-                  <h1 className="text-xl font-bold text-gray-900">Building Store</h1>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <a href="/transaksi" className="text-gray-700 hover:text-gray-900">
-                    Transaksi
-                  </a>
-                  <a href="/pelanggan" className="text-gray-700 hover:text-gray-900">
-                    Pelanggan
-                  </a>
-                  <a href="/produk" className="text-gray-700 hover:text-gray-900">
-                    Produk
-                  </a>
-                </div>
-              </div>
-            </div>
-          </nav>
-          <main>{children}</main>
+    <html lang="en">
+      <body>
+        <Navbar />
+        <div className="container mx-auto px-4 py-4">
+          {children}
         </div>
       </body>
     </html>

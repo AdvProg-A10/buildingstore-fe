@@ -1,46 +1,200 @@
-// src/app/manajemen-produk/[id]/page.tsx
+'use client';
 
-export default function DetailProduk() {
-  // Untuk sekarang ini contoh statis, nanti bisa fetch dari backend
-  const produk = {
-    id: "001",
-    nama: "Contoh Produk",
-    harga: 100000,
-    stok: 20,
-    kategori: "Material",
-    deskripsi: "Ini adalah produk contoh untuk testing tampilan."
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { format } from 'date-fns';
+import { id as localeID } from 'date-fns/locale';
+import { FaArrowLeft, FaBox, FaTag, FaHashtag, FaMoneyBillWave, FaInfoCircle, FaBarcode, FaSpinner, FaEdit } from 'react-icons/fa';
+
+interface Produk {
+  id: number;
+  nama: string;
+  kategori: string;
+  harga: number;
+  stok: number;
+  deskripsi?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+}
+
+const config = {
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+};
+
+export default function ProdukDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const produkId = params?.id as string | undefined;
+
+  const [produk, setProduk] = useState<Produk | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProdukDetail = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/api/produk/${id}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Produk tidak ditemukan.');
+        }
+        const errorData = await response.text();
+        throw new Error(`Gagal mengambil detail produk: ${response.status} ${errorData}`);
+      }
+      const apiResponse: ApiResponse<Produk> = await response.json();
+      if (apiResponse.success && apiResponse.data) {
+        setProduk(apiResponse.data);
+      } else {
+        throw new Error(apiResponse.message || 'Gagal memuat data produk.');
+      }
+    } catch (err: any) {
+      console.error("Error fetching produk detail:", err);
+      setError(err.message);
+      setProduk(null); 
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (produkId) {
+      fetchProdukDetail(produkId);
+    } else {
+      setLoading(false);
+      setError("ID Produk tidak valid atau tidak ditemukan.");
+    }
+  }, [produkId, fetchProdukDetail]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR'
+    }).format(amount);
   };
 
-  return (
-    <div className="p-6 text-black max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Detail Produk</h1>
-      <div className="bg-white border rounded-lg shadow p-6 space-y-4">
-        <p>
-          <span className="font-semibold">ID:</span> {produk.id}
-        </p>
-        <p>
-          <span className="font-semibold">Nama:</span> {produk.nama}
-        </p>
-        <p>
-          <span className="font-semibold">Harga:</span> Rp{produk.harga.toLocaleString()}
-        </p>
-        <p>
-          <span className="font-semibold">Stok:</span> {produk.stok}
-        </p>
-        <p>
-          <span className="font-semibold">Kategori:</span> {produk.kategori}
-        </p>
-        <p>
-          <span className="font-semibold">Deskripsi:</span> {produk.deskripsi}
-        </p>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <FaSpinner className="animate-spin text-4xl text-blue-600" />
+        <p className="ml-3 text-lg text-gray-700">Memuat detail produk...</p>
       </div>
+    );
+  }
 
-      <a
-        href={`/manajemen-produk/${produk.id}/edit`}
-        className="inline-block mt-6 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded"
-      >
-        ✏️ Edit Produk
-      </a>
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center bg-gray-50 min-h-screen">
+        <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold text-red-600 mb-4">Terjadi Kesalahan</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => router.push('/manajemen-produk')}
+            className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+          >
+            <FaArrowLeft className="inline mr-2" /> Kembali ke Daftar Produk
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!produk) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center text-gray-600 bg-gray-50 min-h-screen">
+        Produk tidak ditemukan.
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 bg-gray-100 min-h-screen">
+      <div className="max-w-3xl mx-auto">
+        <button
+          onClick={() => router.push('/manajemen-produk')}
+          className="mb-6 inline-flex items-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+        >
+          <FaArrowLeft className="mr-2" /> Kembali ke Daftar Produk
+        </button>
+
+        <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-4 border-b border-gray-200">
+            <div>
+              <h1 className="text-3xl font-bold text-blue-700 flex items-center">
+                <FaBox className="mr-3 text-4xl text-blue-500" />
+                {produk.nama}
+              </h1>
+              <p className="text-sm text-gray-500 mt-1 font-mono flex items-center" title={produk.id.toString()}>
+                <FaBarcode className="inline mr-1.5" /> ID: {produk.id}
+              </p>
+            </div>
+            <button
+              onClick={() => router.push(`/manajemen-produk/${produk.id}/edit`)}
+              className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <FaEdit /> Edit Produk
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-gray-700">
+            <div className="flex items-start">
+              <FaTag className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
+              <div>
+                <span className="block text-xs font-medium text-gray-500 uppercase">Kategori</span>
+                <p className="text-lg">{produk.kategori}</p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <FaMoneyBillWave className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
+              <div>
+                <span className="block text-xs font-medium text-gray-500 uppercase">Harga</span>
+                <p className="text-lg">{formatCurrency(produk.harga)}</p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <FaHashtag className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
+              <div>
+                <span className="block text-xs font-medium text-gray-500 uppercase">Stok Tersedia</span>
+                <p className="text-lg">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                    produk.stok > 10 
+                      ? 'bg-green-100 text-green-800' 
+                      : produk.stok > 0 
+                      ? 'bg-yellow-100 text-yellow-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {produk.stok} unit
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <FaInfoCircle className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
+              <div>
+                <span className="block text-xs font-medium text-gray-500 uppercase">Update Terakhir</span>
+                <p className="text-lg">
+                  {format(new Date(produk.updated_at), 'dd MMMM yyyy, HH:mm:ss', { locale: localeID })}
+                </p>
+              </div>
+            </div>
+            {produk.deskripsi && (
+              <div className="md:col-span-2 flex items-start">
+                <FaInfoCircle className="mr-3 mt-1 text-xl text-blue-500 flex-shrink-0" />
+                <div>
+                  <span className="block text-xs font-medium text-gray-500 uppercase">Deskripsi</span>
+                  <p className="text-lg whitespace-pre-line">{produk.deskripsi}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

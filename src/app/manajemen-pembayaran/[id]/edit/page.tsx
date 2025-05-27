@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import { ChevronLeftIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
@@ -32,14 +32,9 @@ export default function EditPaymentPage() {
     amount: 0,
     method: 'CASH',
     status: 'LUNAS',
-    due_date: ''
-  });
+    due_date: ''  });
 
-  useEffect(() => {
-    fetchPaymentDetails();
-  }, [paymentId]);
-
-  const fetchPaymentDetails = async () => {
+  const fetchPaymentDetails = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`${config.apiBaseUrl}/api/payments/${paymentId}`);
@@ -72,7 +67,11 @@ export default function EditPaymentPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [paymentId]);
+
+  useEffect(() => {
+    fetchPaymentDetails();
+  }, [fetchPaymentDetails]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -277,10 +276,9 @@ export default function EditPaymentPage() {
                       {status.label}
                     </option>
                   ))}
-                </select>
-                {payment.installments && payment.installments.length > 0 && formData.status === 'LUNAS' && (
+                </select>                {payment.installments && payment.installments.length > 0 && formData.status === 'LUNAS' && (
                   <p className="mt-2 text-sm text-yellow-600">
-                    ⚠️ Mengubah status ke "Lunas" akan mempengaruhi cicilan yang ada.
+                    ⚠️ Mengubah status ke &quot;Lunas&quot; akan mempengaruhi cicilan yang ada.
                   </p>
                 )}
               </div>

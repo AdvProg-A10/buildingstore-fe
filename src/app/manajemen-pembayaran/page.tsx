@@ -64,10 +64,8 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, onConfirm, t
 export default function ManajemenPembayaranPage() {
   const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [loading, setLoading] = useState(true);  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   
   // Filter states
   const [filters, setFilters] = useState<PaymentFilters>({});
@@ -119,11 +117,9 @@ export default function ManajemenPembayaranPage() {
     setPaymentToDelete(payment);
     setShowDeleteModal(true);
   };
-
   const confirmDelete = async () => {
     if (!paymentToDelete) return;
     
-    setIsDeleting(true);
     try {
       const response = await fetch(`${config.apiBaseUrl}/api/payments/${paymentToDelete.id}`, {
         method: 'DELETE',
@@ -139,8 +135,6 @@ export default function ManajemenPembayaranPage() {
     } catch (error) {
       console.error("Error deleting payment:", error);
       alert("Terjadi kesalahan saat menghapus pembayaran");
-    } finally {
-      setIsDeleting(false);
     }
   };
 

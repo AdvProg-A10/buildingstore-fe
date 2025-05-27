@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import { 
@@ -27,14 +27,9 @@ export default function PaymentDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showAddInstallmentModal, setShowAddInstallmentModal] = useState(false);
-  const [newInstallmentAmount, setNewInstallmentAmount] = useState<number>(0);
+  const [showAddInstallmentModal, setShowAddInstallmentModal] = useState(false);  const [newInstallmentAmount, setNewInstallmentAmount] = useState<number>(0);
 
-  useEffect(() => {
-    fetchPaymentDetails();
-  }, [paymentId]);
-
-  const fetchPaymentDetails = async () => {
+  const fetchPaymentDetails = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`${config.apiBaseUrl}/api/payments/${paymentId}`);
@@ -53,7 +48,11 @@ export default function PaymentDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [paymentId]);
+
+  useEffect(() => {
+    fetchPaymentDetails();
+  }, [fetchPaymentDetails]);
 
   const handleDelete = async () => {
     try {
@@ -127,8 +126,7 @@ export default function PaymentDetailPage() {
       </span>
     );
   };
-
-  const getMethodIcon = (method: string) => {
+  const getMethodIcon = () => {
     return <CreditCardIcon className="h-4 w-4" />;
   };
 
@@ -220,9 +218,8 @@ export default function PaymentDetailPage() {
                   <p className="mt-1 text-lg font-semibold text-gray-900">{formatCurrency(payment.amount)}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Metode Pembayaran</label>
-                  <div className="mt-1 flex items-center">
-                    {getMethodIcon(payment.method)}
+                  <label className="block text-sm font-medium text-gray-500">Metode Pembayaran</label>                  <div className="mt-1 flex items-center">
+                    {getMethodIcon()}
                     <span className="ml-2 text-sm text-gray-900">{payment.method}</span>
                   </div>
                 </div>
